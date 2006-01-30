@@ -12,7 +12,7 @@
  * The Original Code is the MonetDB Database System.
  *
  * The Initial Developer of the Original Code is CWI.
- * Portions created by CWI are Copyright (C) 1997-2005 CWI.
+ * Portions created by CWI are Copyright (C) 1997-2006 CWI.
  * All Rights Reserved.
  */
 
@@ -73,6 +73,8 @@ struct MapiStruct {
 
 	int trace;		/* Trace Mapi interaction */
 	int blocked;		/* blocked mode */
+	int auto_commit;
+	char* noexplain;	/* on error, don't explain, only print result */
 	MapiMsg error;		/* Error occurred */
 	char *errorstr;		/* pointer to constant string */
 	const char *action;	/* pointer to constant string */

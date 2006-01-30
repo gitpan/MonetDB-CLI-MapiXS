@@ -19,11 +19,12 @@ $| = 1;
 use strict;
 use warnings;
 
-use Test::More tests => 18;
+use Test::More tests => 14;
+use Devel::Peek;
 
 use MonetDB::CLI::MapiXS;
 
-pass('Connection tests');
+pass('Reference count tests');
 
 my $host = $ENV{MONETDB_HOST} || 'localhost';
 my $port = $ENV{MONETDB_PORT} || 45123;
@@ -36,38 +37,22 @@ my $cxn = eval {
 };
 ok(!$@,'connect') or print "# $@";
 ok( $cxn,"Connection object: $cxn");
+is( Devel::Peek::SvREFCNT( $cxn ), 1,'SvREFCNT cxn');
 
-my $req = eval { $cxn->query('select * from env') };
+my $req1 = eval { $cxn->query('select * from env') };
 ok(!$@,'query') or print "# $@";
-ok( $req,"Request object: $req");
+ok( $req1,"Request object: $req1");
+is( Devel::Peek::SvREFCNT( $req1 ), 1,'SvREFCNT req1');
+is( Devel::Peek::SvREFCNT( $cxn  ), 2,'SvREFCNT cxn' );
 
-my $cnt = eval { $req->columncount };
-is( $cnt, 2,"columncount: $cnt");
+my $req2 = eval { $cxn->query('select * from env') };
+ok(!$@,'query') or print "# $@";
+ok( $req2,"Request object: $req2");
+is( Devel::Peek::SvREFCNT( $req2 ), 1,'SvREFCNT req2');
+is( Devel::Peek::SvREFCNT( $cxn  ), 3,'SvREFCNT cxn' );
 
-my $querytype = eval { $req->querytype };
-is( $querytype, 1,"querytype: $querytype");
+undef $req1;
+is( Devel::Peek::SvREFCNT( $cxn  ), 2,'SvREFCNT cxn' );
 
-for my $k ('id','rows_affected') {
-  my $v = eval { $req->$k };
-  ok( defined $v,"$k: $v");
-}
-for my $k ('name','type','length') {
-  for my $i ( 0, 1 ) {
-    my $v = eval { $req->$k( $i ) };
-    ok( $v,"$k( $i ): $v");
-  }
-}
-my $rows = 0;
-while ( my $cnt = eval { $req->fetch } ) {
-  print '#';
-  print "\t", $req->field( $_ ) for 0 .. $cnt-1;
-  print "\n";
-  $rows++;
-}
-is( $rows, $req->rows_affected,"rows: $rows");
-
-{
-  my $req = eval { $cxn->query('select * from non_existent_table') };
-  ok( $@,"Error expected: $@");
-  ok(!$req,'No request object');
-}
+undef $req2;
+is( Devel::Peek::SvREFCNT( $cxn  ), 1,'SvREFCNT cxn' );
